@@ -166,7 +166,124 @@ def Win (Player, Board):
 
 # Heuristic (evaluation )function return a high value for board
 # states that are favorable for Player, and a low value for board states that are unfavorable
+def jowusu1_h(Player, Board):
+    score = 0
 
+    # Define the opponent
+    opponent = o if Player == x else x
+
+    # Reward for having two in a row with one empty space
+    for i in range(1, NumRows + 1):
+        for j in range(1, NumCols - 1):
+            # Horizontal
+            row = [Board[i][j], Board[i][j + 1], Board[i][j + 2]]
+            if row.count(Player) == 2 and row.count(Empty) == 1:
+                score += 10
+            if row.count(opponent) == 2 and row.count(Empty) == 1:
+                score -= 10  # Penalize for opponent's advantage
+
+    # Reward for having two in a column with one empty space
+    for i in range(1, NumRows - 1):
+        for j in range(1, NumCols + 1):
+            # Vertical
+            col = [Board[i][j], Board[i + 1][j], Board[i + 2][j]]
+            if col.count(Player) == 2 and col.count(Empty) == 1:
+                score += 10
+            if col.count(opponent) == 2 and col.count(Empty) == 1:
+                score -= 10  # Penalize for opponent's advantage
+
+    # Reward for having two in a diagonal with one empty space
+    for i in range(1, NumRows - 1):
+        for j in range(1, NumCols - 1):
+            # Diagonal \
+            if (Board[i][j] == Player and Board[i + 1][j + 1] == Player and Board[i + 2][j + 2] == Empty) or \
+               (Board[i][j] == Player and Board[i + 1][j + 1] == Empty and Board[i + 2][j + 2] == Player) or \
+               (Board[i][j] == Empty and Board[i + 1][j + 1] == Player and Board[i + 2][j + 2] == Player):
+                score += 10
+            if (Board[i][j] == opponent and Board[i + 1][j + 1] == opponent and Board[i + 2][j + 2] == Empty) or \
+               (Board[i][j] == opponent and Board[i + 1][j + 1] == Empty and Board[i + 2][j + 2] == opponent) or \
+               (Board[i][j] == Empty and Board[i + 1][j + 1] == opponent and Board[i + 2][j + 2] == opponent):
+                score -= 10
+
+            # Diagonal /
+            if (Board[i][j + 2] == Player and Board[i + 1][j + 1] == Player and Board[i + 2][j] == Empty) or \
+               (Board[i][j + 2] == Player and Board[i + 1][j + 1] == Empty and Board[i + 2][j] == Player) or \
+               (Board[i][j + 2] == Empty and Board[i + 1][j + 1] == Player and Board[i + 2][j] == Player):
+                score += 10
+            if (Board[i][j + 2] == opponent and Board[i + 1][j + 1] == opponent and Board[i + 2][j] == Empty) or \
+               (Board[i][j + 2] == opponent and Board[i + 1][j + 1] == Empty and Board[i + 2][j] == opponent) or \
+               (Board[i][j + 2] == Empty and Board[i + 1][j + 1] == opponent and Board[i + 2][j] == opponent):
+                score -= 10
+
+    return score
+
+
+ #Using minimax without alpha beta pruning
+
+def minimax(Board, depth, maximizingPlayer, Player):
+    global  states_eval_minmax,  max_depth_achieved_without_minmax
+
+    # Track maximum depth achieved
+    max_depth_achieved_without_minmax = max( max_depth_achieved_without_minmax, MaxDepth - depth)
+
+    # Base case: terminal conditions
+    if depth == 0 or Win(Player, Board) or Win(o if Player == x else x, Board):
+        states_eval_minmax += 1  # Count this state
+        return jowusu1_h(Player, Board)
+
+    if maximizingPlayer:
+        maxEval = -infinity
+        for move in GetMoves(Player, Board):
+            newBoard = ApplyMove(copy.deepcopy(Board), move)
+            eval = minimax(newBoard, depth - 1, False, Player)
+            maxEval = max(maxEval, eval)
+        return maxEval
+    else:
+        minEval = infinity
+        opponent = o if Player == x else x
+        for move in GetMoves(opponent, Board):
+            newBoard = ApplyMove(copy.deepcopy(Board), move)
+            eval = minimax(newBoard, depth - 1, True, Player)
+            minEval = min(minEval, eval)
+        return minEval
+
+# Using minimax with alpha beta pruning and heuristic evaluation function
+def minimax_with_pruning(Board, depth, alpha, beta, maximizingPlayer, Player):
+    global states_eval, max_depth_achieved
+
+    # Track maximum depth achieved
+    max_depth_achieved = max(max_depth_achieved, MaxDepth - depth)
+
+    # Base case: terminal conditions
+    if depth == 0 or Win(Player, Board) or Win(o if Player == x else x, Board):
+        states_eval += 1  # Count this state
+        return jowusu1_h(Player, Board)
+
+    if maximizingPlayer:
+        maxEval = -infinity
+        for move in GetMoves(Player, Board):
+            newBoard = ApplyMove(copy.deepcopy(Board), move)
+            eval = minimax_with_pruning(newBoard, depth - 1, alpha, beta, False, Player)
+            maxEval = max(maxEval, eval)
+            alpha = max(alpha, eval)
+            if beta <= alpha:
+                break  # Alpha-beta pruning
+        return maxEval
+    else:
+        minEval = infinity
+        opponent = o if Player == x else x
+        for move in GetMoves(opponent, Board):
+            newBoard = ApplyMove(copy.deepcopy(Board), move)
+            eval = minimax_with_pruning(newBoard, depth - 1, alpha, beta, True, Player)
+            minEval = min(minEval, eval)
+            beta = min(beta, eval)
+            if beta <= alpha:
+                break  # Alpha-beta pruning
+        return minEval
+
+
+# Using Monte Carlo simulation
+# using 100 simulations
 
 # Q-learning AI setup
 
