@@ -284,6 +284,84 @@ def minimax_with_pruning(Board, depth, alpha, beta, maximizingPlayer, Player):
 
 # Using Monte Carlo simulation
 # using 100 simulations
+def MonteCarloSimulation(Board, Player, simulations=100, max_depth=10):
+    explored_states = 0
+    max_depth_reached = 0
+
+    def rollout(state, player, current_depth):
+        """Perform a simulation from the given state."""
+        nonlocal explored_states, max_depth_reached
+        while current_depth < max_depth and not Win(player, state) and not Win(-player, state):
+            moves = GetMoves(player, state)
+            if not moves:
+                break
+            explored_states += 1
+            max_depth_reached = max(max_depth_reached, current_depth)
+            state = ApplyMove(state, random.choice(moves))
+            player = -player
+            current_depth += 1
+        if Win(player, state):
+            return 1
+        elif Win(-player, state):
+            return -1
+        return 0
+
+    best_move = None
+    best_score = -infinity
+    for move in GetMoves(Player, Board):
+        move_score = 0
+        for _ in range(simulations):
+            move_score += rollout(ApplyMove(copy.deepcopy(Board), move), -Player, 1)
+        if move_score > best_score:
+            best_score = move_score
+            best_move = move
+
+    return best_move, explored_states, max_depth_reached
+
+
+# Using expectiminimax
+def expectiminimax(Board, depth, alpha, beta, maximizingPlayer, Player):
+
+    global states_eval_expected_minimax, max_depth_achieved_expected_minimax
+
+    # Track maximum depth achieved
+    max_depth_achieved_expected_minimax = max(max_depth_achieved_expected_minimax, MaxDepth - depth)
+
+    # Base case: terminal condition or maximum depth
+    if depth == 0 or Win(x, Board) or Win(o, Board) or not (GetMoves(x, Board) or GetMoves(o, Board)):
+        states_eval_expected_minimax += 1
+        return jowusu1_h(Player, Board), None
+
+    if maximizingPlayer:
+        # Maximizing player's turn
+        max_value = -float('inf')
+        best_move = None
+        for move in GetMoves(Player, Board):
+            simulated_board = ApplyMove(copy.deepcopy(Board), move)
+            value, _ = expectiminimax(simulated_board, depth - 1, alpha, beta, False, o if Player == x else x)
+            if value > max_value:
+                max_value = value
+                best_move = move
+            alpha = max(alpha, value)
+            if beta <= alpha:
+                break  # Alpha-beta pruning
+        return max_value, best_move
+
+    else:
+        # Chance node: Expectation over all opponent's moves
+        total_value = 0
+        possible_moves = GetMoves(Player, Board)
+        if not possible_moves:  # No moves available
+            return jowusu1_h(Player, Board), None
+
+        for move in possible_moves:
+            simulated_board = ApplyMove(copy.deepcopy(Board), move)
+            value, _ = expectiminimax(simulated_board, depth - 1, alpha, beta, True, o if Player == x else x)
+            total_value += value / len(possible_moves)
+
+        return total_value, None
+
+
 
 # Q-learning AI setup
 
